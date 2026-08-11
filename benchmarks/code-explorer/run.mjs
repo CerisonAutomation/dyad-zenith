@@ -573,7 +573,7 @@ async function setupBenchmarkAuth() {
   );
   return {
     mode: "codex",
-    apiKey: "codex-benchmark-local-proxy",
+    apiKey: process.env.CODEX_BENCHMARK_API_KEY ?? "codex-benchmark-local-proxy",
     engineUrl: proxy.engineUrl,
     model: values["codex-model"],
     close: proxy.close,
