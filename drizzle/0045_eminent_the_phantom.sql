@@ -1,0 +1,1 @@
+CREATE INDEX `chats_app_id_idx` ON `chats` (`app_id`);

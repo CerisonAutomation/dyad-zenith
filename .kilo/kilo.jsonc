@@ -1,0 +1,18 @@
+{
+  // Developer integration only. Dyad itself does not depend on the Kilo CLI.
+  // Kilo Auto Free may route prompts to third-party free providers; use an
+  // approved private/local provider instead for confidential repositories.
+  "model": "kilo-auto/free",
+  "small_model": "kilo-auto/free",
+  "mcp": {
+    "repo-intel": {
+      "type": "local",
+      "command": ["node", "tools/repo-intel/cli.mjs", "serve"],
+      "enabled": true,
+      "timeout": 30000
+    }
+  },
+  "permission": {
+    "repo-intel_*": "allow"
+  }
+}

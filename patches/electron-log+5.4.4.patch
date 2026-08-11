@@ -1,0 +1,25 @@
+diff --git a/node_modules/electron-log/src/node/transports/console.js b/node_modules/electron-log/src/node/transports/console.js
+index d3468f7..f6a8f2d 100644
+--- a/node_modules/electron-log/src/node/transports/console.js
++++ b/node_modules/electron-log/src/node/transports/console.js
+@@ -56,8 +56,18 @@ function consoleTransportFactory(logger) {
+     useStyles: process.env.FORCE_STYLES,
+ 
+     writeFn({ message }) {
+-      const consoleLogFn = consoleMethods[message.level] || consoleMethods.info;
+-      consoleLogFn(...message.data);
++      try {
++        const consoleLogFn = consoleMethods[message.level] || consoleMethods.info;
++        consoleLogFn(...message.data);
++      } catch (err) {
++        if (err && err.code === 'EPIPE') {
++          // Pipe is broken (stdout/stderr closed). Suppress silently — the app
++          // still logs to file transports. This is a common, harmless condition
++          // when the terminal closes or when running headless.
++          return;
++        }
++        throw err;
++      }
+     },
+   });
+ 

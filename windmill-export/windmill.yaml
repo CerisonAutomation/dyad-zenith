@@ -1,0 +1,21 @@
+# Windmill workspace config for dyad
+workspace: dyad
+type: node
+
+scripts:
+  - name: build
+    path: scripts/build.sh
+    language: bash
+    timeout: 300s
+  - name: deploy
+    path: scripts/deploy.sh
+    language: bash
+    timeout: 86400s
+
+schedule:
+  - flow: dyad
+    cron: "*/5 * * * *"  # health check every 5 min
+
+env:
+  PORT: "3000"
+  NODE_ENV: production

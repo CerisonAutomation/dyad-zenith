@@ -1,0 +1,106 @@
+import type { BrowserWindow } from "electron";
+import { describe, expect, it, vi } from "vitest";
+import { DyadError, DyadErrorKind } from "@/errors/dyad_error";
+import {
+  redactTelemetryText,
+  sendTelemetryEventToWindow,
+  shouldFilterTelemetryException,
+} from "@/ipc/utils/telemetry";
+
+describe("redactTelemetryText", () => {
+  it("removes API keys, bearer tokens, and credential query values", () => {
+    const source =
+      "gsk_abcdefghijklmnopqrstuvwxyz123456 Bearer abc.def.ghi https://x.test/?token=supersecret123 api_key=anothersecret123";
+    const result = redactTelemetryText(source) ?? "";
+    expect(result).not.toContain("abcdefghijklmnopqrstuvwxyz123456");
+    expect(result).not.toContain("abc.def.ghi");
+    expect(result).not.toContain("supersecret123");
+    expect(result).not.toContain("anothersecret123");
+    expect(result).toContain("[REDACTED]");
+  });
+});
+
+describe("shouldFilterTelemetryException", () => {
+  it("filters the known Supabase auth noise message", () => {
+    expect(
+      shouldFilterTelemetryException(
+        new Error(
+          "Supabase access token not found. Please authenticate first.",
+        ),
+      ),
+    ).toBe(true);
+  });
+
+  it("filters RateLimitError 429s from retryWithRateLimit", () => {
+    const error = new Error("Rate limited (429): Too Many Requests");
+    error.name = "RateLimitError";
+
+    expect(shouldFilterTelemetryException(error)).toBe(true);
+  });
+
+  it("filters generic TypeError fetch failed network noise", () => {
+    const error = new TypeError("fetch failed");
+
+    expect(shouldFilterTelemetryException(error)).toBe(true);
+  });
+
+  it("does not filter non-429 RateLimitError variants", () => {
+    const error = new Error("Rate limited (503): Service Unavailable");
+    error.name = "RateLimitError";
+
+    expect(shouldFilterTelemetryException(error)).toBe(false);
+  });
+
+  it("does not filter different Supabase auth failures", () => {
+    expect(
+      shouldFilterTelemetryException(
+        new Error(
+          "Supabase access token not found for organization acme. Please authenticate first.",
+        ),
+      ),
+    ).toBe(false);
+  });
+
+  it("filters DyadError kinds that are non-actionable for telemetry", () => {
+    expect(
+      shouldFilterTelemetryException(
+        new DyadError("bad input", DyadErrorKind.Validation),
+      ),
+    ).toBe(true);
+    expect(
+      shouldFilterTelemetryException(
+        new DyadError("missing", DyadErrorKind.NotFound),
+      ),
+    ).toBe(true);
+  });
+
+  it("does not filter DyadError Internal, External, or Unknown", () => {
+    expect(
+      shouldFilterTelemetryException(
+        new DyadError("bug", DyadErrorKind.Internal),
+      ),
+    ).toBe(false);
+    expect(
+      shouldFilterTelemetryException(
+        new DyadError("upstream", DyadErrorKind.External),
+      ),
+    ).toBe(false);
+    expect(
+      shouldFilterTelemetryException(new DyadError("?", DyadErrorKind.Unknown)),
+    ).toBe(false);
+  });
+});
+
+describe("sendTelemetryEventToWindow", () => {
+  it("sends through the selected product window", () => {
+    const send = vi.fn();
+    const target = { webContents: { send } } as unknown as BrowserWindow;
+
+    sendTelemetryEventToWindow(target, "app:crash_detected", { error: true });
+
+    expect(send).toHaveBeenCalledWith("telemetry:event", {
+      eventName: "app:crash_detected",
+      properties: { error: true },
+    });
+  });
+});

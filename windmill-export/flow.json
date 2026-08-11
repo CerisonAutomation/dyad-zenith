@@ -1,0 +1,45 @@
+{
+  "summary": "dyad deployment",
+  "value": {
+    "modules": [
+      {
+        "id": "f",
+        "value": {
+          "type": "flow",
+          "input_transforms": {},
+          "modules": [
+            {
+              "id": "build",
+              "value": {
+                "type": "script",
+                "language": "bash",
+                "content": "cd /app\nnpm install\necho done",
+                "input_transforms": {}
+              },
+              "timeout": 300
+            },
+            {
+              "id": "deploy",
+              "value": {
+                "type": "script",
+                "language": "bash",
+                "content": "cd /app\nnode index.js",
+                "input_transforms": {}
+              },
+              "timeout": 86400
+            }
+          ]
+        }
+      }
+    ],
+    "schema": {
+      "type": "object",
+      "properties": {
+        "PORT": {
+          "type": "number",
+          "default": 3000
+        }
+      }
+    }
+  }
+}

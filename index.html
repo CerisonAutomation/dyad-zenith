@@ -1,0 +1,16 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; connect-src 'self' https://api.openai.com https://api.anthropic.com https://generativelanguage.googleapis.com https://*.googleapis.com https://openrouter.ai https://api.mistral.ai wss: ws: http://localhost:* https://localhost:*; font-src 'self' data:; media-src 'self' blob: dyad-media:; frame-src 'self' blob: http://localhost:*;"
+    />
+    <title>Dyad</title>
+    <link href="/src/styles/globals.css" rel="stylesheet" />
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/renderer.tsx"></script>
+  </body>
+</html>
