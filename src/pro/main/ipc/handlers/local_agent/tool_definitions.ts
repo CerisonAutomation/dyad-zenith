@@ -46,6 +46,10 @@ import { searchMcpToolsTool } from "./tools/search_mcp_tools";
 import { getMcpToolSchemaTool } from "./tools/get_mcp_tool_schema";
 import { writeAppBlueprintTool } from "./tools/write_app_blueprint";
 import { exitPlanTool } from "./tools/exit_plan";
+import { webCrawlTool } from "./tools/web_crawl";
+import { getNeonProjectInfoTool } from "./tools/get_neon_project_info";
+import { getDatabaseTableSchemaTool } from "./tools/get_database_table_schema";
+import { getSupabaseProjectInfoTool } from "./tools/get_supabase_project_info";
 import { multiFetchTool } from "./tools/multi_fetch";
 import { codeGraphTool } from "./tools/code_graph";
 import { codebaseSummaryTool } from "./tools/codebase_summary";
@@ -126,6 +130,10 @@ export const TOOL_DEFINITIONS: readonly ToolDefinition[] = [
 
   // App context & integrations
   getDatabaseInfoTool,
+  getDatabaseTableSchemaTool,
+  getNeonProjectInfoTool,
+  getSupabaseProjectInfoTool,
+  webCrawlTool,
   setChatSummaryTool,
   exploreChatHistoryTool,
   searchChatsTool,

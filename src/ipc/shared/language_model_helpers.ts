@@ -321,10 +321,10 @@ export async function fetchModelsFromProviderAPI({
     let requestUrl = baseUrl;
 
     // Provider-specific auth headers
-    if (providerId === "anthropic") {
+    if (providerId === "anthropic" && apiKey) {
       headers["x-api-key"] = apiKey;
       headers["anthropic-version"] = "2023-06-01";
-    } else if (providerId === "google") {
+    } else if (providerId === "google" && apiKey) {
       // Google uses x-goog-api-key header (avoids leaking key in URL query string)
       headers["x-goog-api-key"] = apiKey;
     } else if (apiKey) {

@@ -15,6 +15,7 @@
 import { z } from "zod";
 import log from "electron-log";
 import { ToolDefinition, AgentContext, escapeXmlAttr } from "./types";
+import type { AgentToolConsent } from "@/lib/schemas";
 import { readSettings } from "@/main/settings";
 import { safeJoin } from "@/ipc/utils/path_utils";
 import fs from "node:fs/promises";
@@ -72,9 +73,10 @@ export const multiFetchTool: ToolDefinition = {
     "Execute multiple fetch/file/read/search operations in a single parallel call. " +
     "Saves 5+ round-trips when you need to read several files, search the codebase, " +
     "or fetch multiple URLs. Supports: web_fetch, read_file, code_search, file_tree, code_graph.",
-  schema: multiFetchSchema,
+  inputSchema: multiFetchSchema,
+  defaultConsent: "auto-approve" as AgentToolConsent,
 
-  async handler(args, ctx: AgentContext) {
+  async execute(args: any, ctx: AgentContext) {
     const ops = args.operations;
     const concurrency = args.max_concurrent || 5;
     const appPath = ctx.appPath;
@@ -85,7 +87,7 @@ export const multiFetchTool: ToolDefinition = {
     for (let i = 0; i < ops.length; i += concurrency) {
       const batch = ops.slice(i, i + concurrency);
       const batchResults = await Promise.all(
-        batch.map(async (op, batchIdx) => {
+        batch.map(async (op: any, batchIdx: number) => {
           const globalIdx = i + batchIdx;
           const start = Date.now();
           try {
@@ -306,12 +308,12 @@ async function fileTree(dir: string, appPath: string, maxDepth: number) {
   return { dir, files: countTreeFiles(children), dirs: countTreeDirs(children), tree: children };
 }
 
-function countTreeFiles(tree: any[]): number {
+function countTreeFiles(tree: any[] | undefined): number {
   if (!tree) return 0;
   return tree.reduce((n, item) => n + (item.type === "file" ? 1 : countTreeFiles(item.children)), 0);
 }
 
-function countTreeDirs(tree: any[]): number {
+function countTreeDirs(tree: any[] | undefined): number {
   if (!tree) return 0;
   return tree.reduce((n, item) => n + (item.type === "directory" ? 1 + countTreeDirs(item.children) : 0), 0);
 }

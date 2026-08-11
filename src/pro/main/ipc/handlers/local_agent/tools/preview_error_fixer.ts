@@ -54,7 +54,7 @@ export const previewErrorFixerTool: ToolDefinition<
   buildXml: (args) => {
     return [
       `<dyad-preview-error-fixer max_cycles="${args.max_cycles || 3}">`,
-      `<error_output>${escapeXmlContent(args.error_output.slice(0, 4000))}</error_output>`,
+      `<error_output>${escapeXmlContent((args.error_output ?? "").slice(0, 4000))}</error_output>`,
       `</dyad-preview-error-fixer>`,
     ].join("\n");
   },

@@ -297,7 +297,7 @@ async function runBuildCheck(
   const lintText = `${lint.stdout || ""}\n${lint.stderr || ""}`.trim();
   if (lint.status === 0) {
     output.push(lintText ? `✅ Lint: clean\n${lintText.slice(0, 1200)}` : "✅ Lint: clean");
-  } else if (lint.error?.code === "ENOENT") {
+  } else if ((lint.error as any)?.code === "ENOENT") {
     output.push("ℹ️ Lint: runner unavailable");
   } else {
     output.push(`⚠️ Lint check did not pass:\n${lintText.slice(0, 2000)}`);

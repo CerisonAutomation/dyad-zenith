@@ -37,7 +37,7 @@ import {
   canUseKilocodeAnonymously,
 } from "../shared/kilocode_gateway";
 import { FREE_PRO_MODEL_NAME, isFreeProModel } from "@/lib/freeProModel";
-import { createDyadEngine } from "./llm_engine_provider";
+import { createDyadEngine, type DyadEngineProvider } from "./llm_engine_provider";
 let _createDyadEngine: typeof createDyadEngine | null = null;
 // Engine removed — createDyadEngine is no longer called from auto routing.
 

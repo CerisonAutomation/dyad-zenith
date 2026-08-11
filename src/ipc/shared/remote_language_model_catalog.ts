@@ -56,15 +56,17 @@ const CatalogProviderSchema = z.object({
 });
 
 type CatalogModel = {
+  id?: number;
   apiName: string;
   displayName: string;
-  description: string;
+  description?: string;
   tag?: string;
   tagColor?: string;
   dollarSigns?: number;
   temperature?: number;
   maxOutputTokens?: number;
   contextWindow?: number;
+  type?: "cloud" | "custom" | "local";
   lifecycle?: { stage?: "stable" | "preview" | "deprecated" };
 };
 
