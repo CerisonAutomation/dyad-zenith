@@ -682,20 +682,31 @@ async function promptMoveToApplicationsFolder(): Promise<void> {
   if (IS_TEST_BUILD) return;
   if (process.platform !== "darwin") return;
   if (app.isInApplicationsFolder()) return;
+  // Never-block-startup escape hatch: set DYAD_SKIP_MOVE_PROMPT=1 to suppress.
+  if (process.env.DYAD_SKIP_MOVE_PROMPT === "1") return;
   logger.log("Prompting user to move to applications folder");
 
-  const { response } = await dialog.showMessageBox({
-    type: "question",
-    buttons: ["Move to Applications Folder", "Do Not Move"],
-    defaultId: 0,
-    message: "Move to Applications Folder? (required for auto-update)",
-  });
+  // CRITICAL: this dialog must NEVER block window creation. If it goes
+  // unanswered (headless launch, dialog hidden behind other windows, user
+  // away), onReady would hang forever and the app would show a blank screen.
+  // Auto-dismiss as "Do Not Move" after 15 seconds and continue startup.
+  const answer = await Promise.race([
+    dialog.showMessageBox({
+      type: "question",
+      buttons: ["Move to Applications Folder", "Do Not Move"],
+      defaultId: 0,
+      message: "Move to Applications Folder? (required for auto-update)",
+    }),
+    new Promise<{ response: number }>((resolve) =>
+      setTimeout(() => resolve({ response: 1 }), 15000),
+    ),
+  ]);
 
-  if (response === 0) {
+  if (answer.response === 0) {
     logger.log("User chose to move to applications folder");
     app.moveToApplicationsFolder();
   } else {
-    logger.log("User chose not to move to applications folder");
+    logger.log("User chose not to move to applications folder (or dialog timed out)");
   }
 }
 
@@ -1128,6 +1139,11 @@ const createWindow = ({
     );
   }
 
+  // Last successfully-attempted renderer URL (used by crash/load recovery below).
+  // Populated from did-fail-load events so recovery never depends on vite-defined
+  // globals that may not be substituted in custom rebuilds.
+  let lastRendererUrl: string | undefined;
+
   // Persist any non-clean renderer-process termination so we can report it on
   // the next successful renderer load. We deliberately do nothing here besides
   // writing the record: triggering reloads/dialogs is out of scope for the
@@ -1154,7 +1170,79 @@ const createWindow = ({
       exitCode: details.exitCode,
       performance: readSettings().lastKnownPerformance,
     });
+
+    // ── Never-blank recovery: reload the renderer after a crash ──
+    const crashTarget = lastRendererUrl || browserWindow.webContents.getURL();
+    if (crashTarget && !crashTarget.startsWith("data:") && !browserWindow.isDestroyed()) {
+      setTimeout(() => {
+        if (!browserWindow.isDestroyed()) {
+          debugLog("recovery: reloading renderer after crash (" + details.reason + ")");
+          browserWindow.loadURL(crashTarget).catch(() => {
+            debugLog("recovery: reload after crash failed — will retry via did-fail-load");
+          });
+        }
+      }, 1500);
+    }
   });
+
+  // ── Never-blank recovery: retry failed loads with backoff, then show a
+  // branded fallback page instead of a white/blank window. This covers the
+  // case where the Vite dev server dies or restarts while Electron is up.
+  {
+    let failCount = 0;
+    const MAX_FAILS = 15;
+    const fallbackPage = () => {
+      const html = `<!doctype html><html><head><meta charset="utf-8"><title>Dyad</title>
+<style>
+  html,body{margin:0;height:100%;background:#0d0d12;color:#e8e8ea;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;display:flex;align-items:center;justify-content:center}
+  .card{text-align:center;max-width:460px;padding:40px}
+  .logo{font-size:44px;margin-bottom:12px}
+  h1{font-size:20px;font-weight:600;margin:0 0 8px}
+  p{font-size:14px;color:#9a9aa5;margin:0 0 20px;line-height:1.5}
+  .spinner{width:28px;height:28px;border:3px solid #2a2a35;border-top-color:#575ecf;border-radius:50%;margin:0 auto 20px;animation:spin 1s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  button{background:#575ecf;color:#fff;border:0;border-radius:8px;padding:10px 22px;font-size:14px;cursor:pointer}
+  button:hover{background:#656de0}
+  .status{font-size:12px;color:#6a6a75;margin-top:14px}
+</style></head><body><div class="card">
+  <div class="logo">⚡</div>
+  <h1>Dyad is reconnecting…</h1>
+  <p>The renderer service is not responding.<br/>Retrying automatically — no action needed.</p>
+  <div class="spinner"></div>
+  <button onclick="location.reload()">Retry now</button>
+  <div class="status">Auto-retry every few seconds</div>
+</div></body></html>`;
+      if (browserWindow.isDestroyed()) return;
+      debugLog("recovery: showing fallback page (never blank)");
+      browserWindow.loadURL("data:text/html;charset=utf-8," + encodeURIComponent(html)).catch(() => {});
+    };
+
+    browserWindow.webContents.on("did-fail-load", (_e, code, desc, url, isMainFrame) => {
+      if (!isMainFrame || isAppQuitting) return;
+      if (url.startsWith("data:")) return;
+      failCount++;
+      lastRendererUrl = url; // remember the real renderer URL (no vite-define dependency)
+      debugLog(`recovery: did-fail-load #${failCount} (${code} ${desc}) url=${url}`);
+      if (failCount > MAX_FAILS) { fallbackPage(); return; }
+      // Backoff: 1s → 2s → 4s … capped at 10s. Works whether Vite is dead,
+      // restarting, or the renderer simply hiccupped.
+      const delay = Math.min(1000 * Math.pow(2, Math.floor(failCount / 3)), 10000);
+      setTimeout(() => {
+        if (browserWindow.isDestroyed()) return;
+        // Show a branded status page during long outages (failCount >= 5) so
+        // the window is never a silent white rectangle.
+        if (failCount >= 5) fallbackPage();
+        browserWindow.loadURL(url).catch(() => {
+          debugLog("recovery: loadURL rejected, will retry");
+        });
+      }, delay);
+    });
+
+    // If a load succeeds, reset the failure counter.
+    browserWindow.webContents.on("did-finish-load", () => {
+      failCount = 0;
+    });
+  }
 
   // Enable native context menu on right-click
   browserWindow.webContents.on("context-menu", (event, params) => {

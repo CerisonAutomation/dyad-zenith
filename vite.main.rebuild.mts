@@ -13,6 +13,11 @@ export default defineConfig(
     {
       configFile: false,
       clearScreen: false,
+      define: {
+        // Forge's main-target config injects this for dev builds; without it the
+        // identifier survives into the bundle and throws ReferenceError at runtime.
+        MAIN_WINDOW_VITE_DEV_SERVER_URL: JSON.stringify("http://localhost:5173"),
+      },
       build: {
         copyPublicDir: false,
         outDir: ".vite/build",
