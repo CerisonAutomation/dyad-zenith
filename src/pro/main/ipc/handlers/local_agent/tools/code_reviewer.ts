@@ -10,6 +10,7 @@ import { generateText } from "ai";
 import { resolveAgentModelRuntime } from "../agent_model_runtime";
 import { execGitCommand } from "../utils";
 import { resolveTargetAppPath } from "./resolve_app_context";
+import { join } from "path";
 import { safeJoin } from "@/ipc/utils/path_utils";
 
 const logger = log.scope("code_reviewer");

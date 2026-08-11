@@ -5,7 +5,7 @@
  */
 import { z } from "zod";
 import { readFile } from "fs/promises";
-import { resolve } from "path";
+import { resolve, join, extname } from "path";
 import { escapeXmlAttr, type ToolDefinition, type ToolResult } from "./types";
 import { safeJoin } from "@/ipc/utils/path_utils";
 

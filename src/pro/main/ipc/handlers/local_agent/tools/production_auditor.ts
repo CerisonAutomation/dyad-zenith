@@ -6,7 +6,7 @@
  */
 import { z } from "zod";
 import log from "electron-log";
-import { relative } from "path";
+import { relative, join } from "path";
 import { resolveReadPathWithinApp } from "@/ipc/utils/path_utils";
 import { collectTargetFiles } from "./codebase_walker";
 import { escapeXmlAttr, type ToolDefinition, type AgentContext } from "./types";
